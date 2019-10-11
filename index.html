@@ -127,7 +127,7 @@
             if (videoURL === "") {
                 alert("没有视频地址.");
             } else {
-                start_play(videoURL);
+                start_play("ws://" + videoURL);
                 videoElement.playbackRate = 1.1;
             }
             set_size("100vw", "56vw");
