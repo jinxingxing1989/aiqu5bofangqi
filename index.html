@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+    <title>H5Live</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script>
+        var getParam = (paramName) => {
+            var paramValue = "";
+            var isFound = !1;
+            if (this.location.search.indexOf("?") == 0 && this.location.search.indexOf("=") > 1) {
+                var arrSource = unescape(this.location.search).substring(1, this.location.search.length).split("&");
+                var i = 0;
+                while (i < arrSource.length && !isFound) {
+                    arrSource[i].indexOf("=") > 0 && arrSource[i].split("=")[0].toLowerCase() == paramName.toLowerCase() && (paramValue = arrSource[i].split("=")[1], isFound = !0), i++;
+                }
+            };
+            return paramValue;
+        }
+    </script>
+</head>
+
+<body>
+    <div id="video"></div>
+    <script src="/player.js"></script>
+    <script>
+        var videoFrame = document.getElementById("video");
+        var videoElement; //视频标签元素
+        var player; //播放器对象
+        var videoURL; //视频流url
+        var start_play, stop_play, replay;
+
+        //设置标签长宽
+        set_size = (width, height) => {
+            if (typeof videoElement === "undefined") { return; }
+            videoElement.style.width = width;
+            videoElement.style.height = height;
+        };
+
+        //前后台切换处理
+        document.addEventListener("visibilitychange", () => {
+            switch (document.visibilityState) {
+                case "visible":
+                    console.log("欢迎回来！");
+                    start_play(videoURL);
+                    break;
+                case "hidden":
+                    console.log("不要走！");
+                    stop_play();
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        //判断是否支持硬件解码
+        if (flvjs.isSupported()) {
+            videoFrame.innerHTML = "<video id=\"videoElement\" autoplay=\"autoplay\" muted></video>"
+            videoElement = document.getElementById('videoElement');
+
+            //设置播放控制方法
+            start_play = (url) => {
+                videoURL = url;
+                if (typeof player !== "undefined") {
+                    if (player != null) {
+                        player.pause();
+                        player.unload();
+                        player.detachMediaElement();
+                        player.destroy();
+                        player = null;
+                    }
+                }
+
+                player = flvjs.createPlayer({
+                    url: videoURL,
+                    type: "flv",
+                    isLive: true,
+                    enableStashBuffer: false,
+                });
+                videoElement.addEventListener('canplay', () => { player.play(); });
+                videoElement.addEventListener('ended', () => { setTimeout(() => { start_play(videoURL); }, 2000); });
+                videoElement.addEventListener('error', () => { setTimeout(() => { start_play(videoURL); }, 2000); });
+
+                player.attachMediaElement(videoElement);
+                player.load();
+            };
+            stop_play = () => {
+                player.unload();
+            };
+            replay = start_play;
+
+        } else { //软解播放，针对苹果手机不支持硬解的解决方案
+            videoFrame.innerHTML = "<canvas id=\"videoElement\" width=\"960px\" height=\"540px\"></canvas>"
+            videoElement = document.getElementById('videoElement');
+
+            player = new Module.NodePlayer();
+            //事件监听器
+            player.on("start", () => { });
+            player.on("close", () => { setTimeout(() => { start_play(videoURL); }, 2000); });
+            player.on('error', (err) => { setTimeout(() => { start_play(videoURL); }, 2000); });
+            //播放器初始化
+            player.setPlayView('videoElement');
+            player.setScaleMode(0);
+            player.enableVideo(1);
+            //设置播放控制方法
+            start_play = (url) => {
+                videoURL = url;
+                player.stop();
+                player.start(videoURL);
+            };
+            stop_play = () => {
+                player.stop();
+            };
+            replay = start_play;
+        };
+
+        var start = () => {
+            var videoURL = getParam("stream");
+            console.log("url:", videoURL);
+            if (videoURL === "") {
+                alert("没有视频地址.");
+            } else {
+                start_play(videoURL);
+                videoElement.playbackRate = 1.1;
+            }
+            set_size("100vw", "56vw");
+        };
+
+        start();
+
+    </script>
+</body>
+
+</html>
